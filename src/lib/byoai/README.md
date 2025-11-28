@@ -105,7 +105,7 @@ When implementing, porting, or extending BYOAI:
 - ✅ Generate idiomatic TypeScript and React code
 - ✅ Add new provider implementations that follow the `AIProvider` interface
 - ✅ Generate helper functions that comply with the architecture
-- ✅ Improve error messages while preserving their semantic meaning
+- ✅ Error message text is part of the contract. Implementations MAY add additional context (e.g., `error.cause`) but MUST NOT modify, reword, or replace the core message string
 - ✅ Add inline documentation and examples
 - ✅ Optimize performance without changing behavior
 
