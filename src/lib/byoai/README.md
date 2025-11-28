@@ -368,6 +368,35 @@ call<TResult>(apiKey: string, options: AICallOptions<TResult>): Promise<TResult>
 - Multi-modal: Combine parts in provider's expected structure
 - Preserve order: Send parts in the exact order they appear in `options.content`
 
+**Response Extraction Contract:**
+
+Providers MUST extract the provider's raw text response and pass it directly to `options.parseResponse(rawText)`. The raw text MUST represent the entire text output of the provider's final message.
+
+Providers MUST NOT:
+- Trim or modify whitespace
+- Remove JSON braces or other characters
+- Perform partial extraction (e.g., taking first N characters)
+- Concatenate multiple messages
+- Drop sections of the output
+- Re-format or pretty-print JSON
+- Parse JSON before passing to `parseResponse`
+
+**Example (Gemini):**
+```typescript
+// ✅ CORRECT - Extract complete raw text
+const rawText = data.candidates[0].content.parts[0].text;
+return options.parseResponse(rawText);
+
+// ❌ WRONG - Trimming or modifying
+return options.parseResponse(rawText.trim());
+
+// ❌ WRONG - Parsing before parseResponse
+const parsed = JSON.parse(rawText);
+return options.parseResponse(JSON.stringify(parsed));
+```
+
+This contract ensures that `parseResponse` receives identical raw text regardless of which provider is used, preventing subtle bugs from provider-specific response handling.
+
 **Forbidden Behaviors:**
 - Never store API keys in class properties
 - Never log API keys or encrypted data
