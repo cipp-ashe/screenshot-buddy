@@ -65,6 +65,69 @@ BYOAI is a standalone library you can copy directly into your project. No npm pa
 
 **Maximum Flexibility** - Works with text, images, audio, or any combination. You provide the content and parsing logic - BYOAI handles the rest.
 
+## For AI Agents and Implementers
+
+This section defines constraints for AI agents (like Lovable) rebuilding or extending BYOAI. Human developers can read this to understand the system's boundaries.
+
+### What Implementations MUST NOT Do
+
+When implementing, porting, or extending BYOAI:
+
+**Architecture Changes (Forbidden):**
+- ❌ Invent additional content types beyond `text`, `image`, `audio`
+- ❌ Refactor the core architecture (encryption → storage → provider abstraction)
+- ❌ Rename methods, interfaces, or core arguments
+- ❌ Restructure the file organization
+- ❌ Change error message text (they're part of the contract)
+
+**Feature Additions (Forbidden):**
+- ❌ Add UI components (BYOAI is infrastructure only)
+- ❌ Add automatic retry logic (let consumers handle this)
+- ❌ Add caching or request batching
+- ❌ Add auto-heuristics (trimming, parsing, formatting)
+- ❌ Modify user prompts or AI outputs
+- ❌ Add middleware or interceptors
+
+**Storage Violations (Forbidden):**
+- ❌ Use cookies, indexedDB, or sessionStorage
+- ❌ Store data in anything except the two defined localStorage keys
+- ❌ Store raw (unencrypted) API keys anywhere
+- ❌ Mutate global window state
+
+**Security Violations (Forbidden):**
+- ❌ Log API keys or encrypted data
+- ❌ Send API keys to endpoints other than the provider's official API
+- ❌ Store decrypted keys in memory beyond the call boundary
+
+### What Implementations MAY Do
+
+**Encouraged Behaviors:**
+- ✅ Generate idiomatic TypeScript and React code
+- ✅ Add new provider implementations that follow the `AIProvider` interface
+- ✅ Generate helper functions that comply with the architecture
+- ✅ Improve error messages while preserving their semantic meaning
+- ✅ Add inline documentation and examples
+- ✅ Optimize performance without changing behavior
+
+**Use Cases for This Spec:**
+```
+"Rebuild the full BYOAI library following this README"
+"Port BYOAI to Vue.js using this architecture"
+"Generate a new OpenAI provider following the contract"
+"Refactor encryption.ts for better performance"
+```
+
+### Deterministic Behaviors Required
+
+These behaviors MUST be deterministic and consistent:
+- Encrypted data JSON structure (see Architecture Invariants)
+- localStorage key names (`{prefix}api_key`, `{prefix}provider`)
+- Provider ID registry (`gemini`, future providers)
+- Timeout duration (15 seconds)
+- Content part ordering
+- Error message strings
+- Response passed to `parseResponse` (raw, unmodified text)
+
 ## Quick Start
 
 ```tsx
