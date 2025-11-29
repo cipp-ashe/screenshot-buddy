@@ -78,7 +78,7 @@ When implementing, porting, or extending BYOAI:
 - ❌ Refactor the core architecture (encryption → storage → provider abstraction)
 - ❌ Rename methods, interfaces, or core arguments
 - ❌ Restructure the file organization
-- ❌ Change error message text (they're part of the contract)
+- ❌ Modify, reword, or replace core error message strings (they're part of the contract; additional context via separate fields like `error.cause` is permitted)
 
 **Feature Additions (Forbidden):**
 - ❌ Add UI components (BYOAI is infrastructure only)
@@ -360,7 +360,7 @@ Example with default prefix:
 **API Call Timeouts:**
 - Default timeout: **15 seconds** (using `AbortSignal`)
 - Configurable per-provider in future versions
-- Timeout errors throw `DOMException` with name `"TimeoutError"` (browser-native error)
+- Timeout errors throw with a browser-specific message (e.g., `"The operation was aborted due to timeout"`)
 
 **Error Return Patterns:**
 - `saveApiKey(key)` → Returns `{ success: boolean; error?: string }` (never throws)
@@ -369,7 +369,7 @@ Example with default prefix:
 - `validateApiKey(key)` → Returns `{ isValid: boolean; error?: string }` (never throws)
 
 **Common Error Messages:**
-- `"No API key configured"` - User hasn't saved a key
+- `"No API key configured. Please save an API key first."` - User hasn't saved a key
 - `"Authentication failed - API key may be invalid"` - API rejected the key (401/403)
 - `"Failed to decrypt data"` - Browser fingerprint changed or data corrupted
 - `"Data expired"` - Stored key exceeded `maxAge` (default 30 days)
