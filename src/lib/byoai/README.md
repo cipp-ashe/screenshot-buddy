@@ -360,7 +360,7 @@ Example with default prefix:
 **API Call Timeouts:**
 - Default timeout: **15 seconds** (using `AbortSignal`)
 - Configurable per-provider in future versions
-- Timeout errors throw with message: `"Request timeout"`
+- Timeout errors throw `DOMException` with name `"TimeoutError"` (browser-native error)
 
 **Error Return Patterns:**
 - `saveApiKey(key)` → Returns `{ success: boolean; error?: string }` (never throws)
@@ -373,7 +373,7 @@ Example with default prefix:
 - `"Authentication failed - API key may be invalid"` - API rejected the key (401/403)
 - `"Failed to decrypt data"` - Browser fingerprint changed or data corrupted
 - `"Data expired"` - Stored key exceeded `maxAge` (default 30 days)
-- `"Request timeout"` - API call took longer than 15 seconds
+- `DOMException: TimeoutError` - API call took longer than 15 seconds (browser-native timeout)
 
 ### Hook Lifecycle Guarantees
 
