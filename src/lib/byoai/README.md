@@ -360,7 +360,7 @@ Example with default prefix:
 **API Call Timeouts:**
 - Default timeout: **15 seconds** (using `AbortSignal`)
 - Configurable per-provider in future versions
-- Timeout errors throw with message: `"Request timeout"`
+- Timeout errors throw with a browser-specific message (e.g., `"The operation was aborted due to timeout"`)
 
 **Error Return Patterns:**
 - `saveApiKey(key)` → Returns `{ success: boolean; error?: string }` (never throws)
