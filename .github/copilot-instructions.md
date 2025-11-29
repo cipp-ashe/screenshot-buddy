@@ -65,7 +65,7 @@ npm install          # Install dependencies
 npm run dev          # Start development server (http://localhost:8080)
 ```
 
-### Build & Testing
+### Build & Linting
 ```bash
 npm run build        # Production build
 npm run build:dev    # Development build
