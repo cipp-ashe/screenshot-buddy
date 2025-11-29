@@ -78,7 +78,7 @@ When implementing, porting, or extending BYOAI:
 - ❌ Refactor the core architecture (encryption → storage → provider abstraction)
 - ❌ Rename methods, interfaces, or core arguments
 - ❌ Restructure the file organization
-- ❌ Change error message text (they're part of the contract)
+- ❌ Modify, reword, or replace core error message strings (they're part of the contract; additional context via separate fields like `error.cause` is permitted)
 
 **Feature Additions (Forbidden):**
 - ❌ Add UI components (BYOAI is infrastructure only)
