@@ -369,7 +369,7 @@ Example with default prefix:
 - `validateApiKey(key)` → Returns `{ isValid: boolean; error?: string }` (never throws)
 
 **Common Error Messages:**
-- `"No API key configured"` - User hasn't saved a key
+- `"No API key configured. Please save an API key first."` - User hasn't saved a key
 - `"Authentication failed - API key may be invalid"` - API rejected the key (401/403)
 - `"Failed to decrypt data"` - Browser fingerprint changed or data corrupted
 - `"Data expired"` - Stored key exceeded `maxAge` (default 30 days)
