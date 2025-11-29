@@ -373,7 +373,7 @@ Example with default prefix:
 - `"Authentication failed - API key may be invalid"` - API rejected the key (401/403)
 - `"Failed to decrypt data"` - Browser fingerprint changed or data corrupted
 - `"Data expired"` - Stored key exceeded `maxAge` (default 30 days)
-- `"Request timeout"` - API call took longer than 15 seconds
+- `DOMException: TimeoutError` - API call took longer than 15 seconds (browser-native timeout)
 
 ### Hook Lifecycle Guarantees
 
