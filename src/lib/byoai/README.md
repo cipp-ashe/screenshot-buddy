@@ -65,6 +65,69 @@ BYOAI is a standalone library you can copy directly into your project. No npm pa
 
 **Maximum Flexibility** - Works with text, images, audio, or any combination. You provide the content and parsing logic - BYOAI handles the rest.
 
+## For AI Agents and Implementers
+
+This section defines constraints for AI agents (like Lovable) rebuilding or extending BYOAI. Human developers can read this to understand the system's boundaries.
+
+### What Implementations MUST NOT Do
+
+When implementing, porting, or extending BYOAI:
+
+**Architecture Changes (Forbidden):**
+- ❌ Invent additional content types beyond `text`, `image`, `audio`
+- ❌ Refactor the core architecture (encryption → storage → provider abstraction)
+- ❌ Rename methods, interfaces, or core arguments
+- ❌ Restructure the file organization
+- ❌ Change error message text (they're part of the contract)
+
+**Feature Additions (Forbidden):**
+- ❌ Add UI components (BYOAI is infrastructure only)
+- ❌ Add automatic retry logic (let consumers handle this)
+- ❌ Add caching or request batching
+- ❌ Add auto-heuristics (trimming, parsing, formatting)
+- ❌ Modify user prompts or AI outputs
+- ❌ Add middleware or interceptors
+
+**Storage Violations (Forbidden):**
+- ❌ Use cookies, indexedDB, or sessionStorage
+- ❌ Store data in anything except the two defined localStorage keys
+- ❌ Store raw (unencrypted) API keys anywhere
+- ❌ Mutate global window state
+
+**Security Violations (Forbidden):**
+- ❌ Log API keys or encrypted data
+- ❌ Send API keys to endpoints other than the provider's official API
+- ❌ Store decrypted keys in memory beyond the call boundary
+
+### What Implementations MAY Do
+
+**Encouraged Behaviors:**
+- ✅ Generate idiomatic TypeScript and React code
+- ✅ Add new provider implementations that follow the `AIProvider` interface
+- ✅ Generate helper functions that comply with the architecture
+- ✅ Error message text is part of the contract. Implementations MAY add additional context (e.g., `error.cause`) but MUST NOT modify, reword, or replace the core message string
+- ✅ Add inline documentation and examples
+- ✅ Optimize performance without changing behavior
+
+**Use Cases for This Spec:**
+```
+"Rebuild the full BYOAI library following this README"
+"Port BYOAI to Vue.js using this architecture"
+"Generate a new OpenAI provider following the contract"
+"Refactor encryption.ts for better performance"
+```
+
+### Deterministic Behaviors Required
+
+These behaviors MUST be deterministic and consistent:
+- Encrypted data JSON structure (see Architecture Invariants)
+- localStorage key names (`{prefix}api_key`, `{prefix}provider`)
+- Provider ID registry (`gemini`, future providers)
+- Timeout duration (15 seconds)
+- Content part ordering
+- Error message strings
+- Response passed to `parseResponse` (raw, unmodified text)
+
 ## Quick Start
 
 ```tsx
@@ -237,6 +300,172 @@ src/lib/byoai/
 │   └── useBYOAI.ts       # Main hook
 └── index.ts              # Public API
 ```
+
+## Architecture Invariants
+
+These rules **MUST** be maintained across all implementations of BYOAI:
+
+### Non-Negotiable Rules
+
+1. **API keys never in React state** - Keys flow: user input → validate → encrypt → localStorage. Never stored in component state or passed as props.
+
+2. **Provider interface is mandatory** - All providers MUST implement the `AIProvider` interface with both `validateApiKey()` and `call()` methods. No exceptions.
+
+3. **Encryption before storage** - `SecureStorage.store()` always encrypts data before writing to localStorage. Raw values never touch localStorage.
+
+4. **Parser always invoked** - Provider `call()` MUST return `options.parseResponse(rawText)`, never raw API response strings.
+
+5. **Content order preserved** - The `ContentPart[]` array order is maintained in API requests. Providers must not reorder parts.
+
+6. **Singleton storage instances** - `SecureStorage.getInstance()` ensures only one instance exists per storage prefix, preventing encryption key mismatches.
+
+7. **Fingerprint binding** - Encrypted data is bound to browser fingerprint. Keys cannot be transferred between browsers without re-entry.
+
+### Encrypted Data Format
+
+All encrypted values stored in localStorage follow this JSON schema:
+
+```json
+{
+  "data": [/* AES-256-GCM encrypted bytes as number array */],
+  "iv": [/* 12-byte initialization vector as number array */],
+  "timestamp": 1700000000000,  // Unix timestamp in milliseconds
+  "version": "1.0"              // Encryption version for migration
+}
+```
+
+**Example encrypted value:**
+```json
+{
+  "data": [142, 98, 211, ...],
+  "iv": [88, 204, 156, 73, 28, 251, 199, 45, 116, 231, 90, 33],
+  "timestamp": 1732752000000,
+  "version": "1.0"
+}
+```
+
+### Storage Keys
+
+BYOAI uses these `localStorage` keys (with configurable prefix, default `"byoai_"`):
+
+- **`{prefix}api_key`** - Encrypted API key blob (JSON string)
+- **`{prefix}provider`** - Provider ID string (unencrypted, e.g., `"gemini"`)
+
+Example with default prefix:
+- `byoai_api_key` → `{"data":[...],"iv":[...],"timestamp":1732752000000,"version":"1.0"}`
+- `byoai_provider` → `"gemini"`
+
+### Timeout and Error Behavior
+
+**API Call Timeouts:**
+- Default timeout: **15 seconds** (using `AbortSignal`)
+- Configurable per-provider in future versions
+- Timeout errors throw with a browser-specific message (e.g., `"The operation was aborted due to timeout"`)
+
+**Error Return Patterns:**
+- `saveApiKey(key)` → Returns `{ success: boolean; error?: string }` (never throws)
+- `call(options)` → Throws `Error` on failure with descriptive message
+- `decrypt(data)` → Throws on failure OR silently removes corrupted key and returns `null`
+- `validateApiKey(key)` → Returns `{ isValid: boolean; error?: string }` (never throws)
+
+**Common Error Messages:**
+- `"No API key configured. Please save an API key first."` - User hasn't saved a key
+- `"Authentication failed - API key may be invalid"` - API rejected the key (401/403)
+- `"Failed to decrypt data"` - Browser fingerprint changed or data corrupted
+- `"Data expired"` - Stored key exceeded `maxAge` (default 30 days)
+- `"Request timeout"` - API call took longer than 15 seconds
+
+### Hook Lifecycle Guarantees
+
+The `useBYOAI` hook follows these lifecycle rules:
+
+**1. Initialization (Mount)**
+```
+Component mounts → syncFromStorage() → Reads localStorage → Updates state
+```
+
+**2. State Synchronization**
+- Hook subscribes to `SecureStorage` on mount
+- Any storage change triggers re-render across ALL components using the hook
+- Unsubscribes on unmount
+
+**3. `isLoading` State**
+- Set to `true` when `call()` starts
+- Set to `false` when `call()` completes (success or error)
+- Never `true` during `saveApiKey()` or `removeApiKey()`
+
+**4. `hasApiKey` Updates**
+- Updates immediately after successful `saveApiKey()` completes
+- Updates immediately after `removeApiKey()` is called
+- Syncs from storage on mount and on external storage changes
+
+**5. Re-render Triggers**
+- `call()` start/finish (via `isLoading`)
+- `saveApiKey()` success (via `hasApiKey`)
+- `removeApiKey()` (via `hasApiKey`)
+- `changeProvider()` (via `provider`)
+- External `localStorage` changes from other tabs/windows
+
+### Provider Implementation Rules
+
+When creating new providers, you MUST follow these contracts:
+
+**Required Methods:**
+```typescript
+validateApiKey(apiKey: string): ApiKeyValidation
+  // Returns { isValid: boolean; error?: string }
+  // MUST NOT throw errors
+  // MUST check format, not make API calls
+
+call<TResult>(apiKey: string, options: AICallOptions<TResult>): Promise<TResult>
+  // Returns parsed result via options.parseResponse()
+  // MUST throw Error on API failure
+  // MUST respect ContentPart order
+  // MUST include timeout handling
+```
+
+**Content Translation Rules:**
+- Text parts: Use provider's native text format
+- Image parts: Convert base64 data to provider-specific format
+- Audio parts: Convert base64 data (future providers may support)
+- Multi-modal: Combine parts in provider's expected structure
+- Preserve order: Send parts in the exact order they appear in `options.content`
+
+**Response Extraction Contract:**
+
+Providers MUST extract the provider's raw text response and pass it directly to `options.parseResponse(rawText)`. The raw text MUST represent the entire text output of the provider's final message.
+
+Providers MUST NOT:
+- Trim or modify whitespace
+- Remove JSON braces or other characters
+- Perform partial extraction (e.g., taking first N characters)
+- Concatenate multiple messages
+- Drop sections of the output
+- Re-format or pretty-print JSON
+- Parse JSON before passing to `parseResponse`
+
+**Example (Gemini):**
+```typescript
+// ✅ CORRECT - Extract complete raw text
+const rawText = data.candidates[0].content.parts[0].text;
+return options.parseResponse(rawText);
+
+// ❌ WRONG - Trimming or modifying
+return options.parseResponse(rawText.trim());
+
+// ❌ WRONG - Parsing before parseResponse
+const parsed = JSON.parse(rawText);
+return options.parseResponse(JSON.stringify(parsed));
+```
+
+This contract ensures that `parseResponse` receives identical raw text regardless of which provider is used, preventing subtle bugs from provider-specific response handling.
+
+**Forbidden Behaviors:**
+- Never store API keys in class properties
+- Never log API keys or encrypted data
+- Never modify `options.content` array
+- Never return raw API response text (always invoke `parseResponse`)
+- Never implement authentication retry logic (let consumer handle)
 
 ## Adding New Providers
 
